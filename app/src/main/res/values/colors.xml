@@ -1,0 +1,10 @@
+<resources>
+    <color name="brand_blue">#2962FF</color>
+    <color name="brand_blue_dark">#0039CB</color>
+    <color name="brand_blue_light">#E6EEFF</color>
+    <color name="app_bg">#FFFFFF</color>
+    <color name="card_bg">#FFFFFF</color>
+    <color name="card_stroke">#E0E6F5</color>
+    <color name="text_primary">#0A0A0A</color>
+    <color name="text_secondary">#6B7280</color>
+</resources>

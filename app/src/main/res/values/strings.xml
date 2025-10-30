@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">NT Woods (P) Ltd.</string>
+    <string name="thumbnail">Thumbnail</string>
+    <string name="pdf_page">PDF Page</string>
+    <string name="prev">Previous</string>
+    <string name="next">Next</string>
+</resources>

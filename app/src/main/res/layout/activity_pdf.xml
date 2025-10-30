@@ -1,0 +1,37 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical" android:layout_width="match_parent"
+    android:layout_height="match_parent" android:background="@color/app_bg">
+
+    <ImageView
+        android:id="@+id/pdfImage"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:adjustViewBounds="true"
+        android:contentDescription="@string/pdf_page" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:padding="12dp">
+
+        <ImageButton
+            android:id="@+id/btnPrev"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@drawable/ic_chevron_left"
+            android:backgroundTint="@color/brand_blue"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/prev" />
+
+        <ImageButton
+            android:id="@+id/btnNext"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@drawable/ic_chevron_right"
+            android:backgroundTint="@color/brand_blue"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/next" />
+    </LinearLayout>
+</LinearLayout>

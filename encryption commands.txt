@@ -1,0 +1,19 @@
+For Videos
+
+$env:AES_KEY_B64 = "hX4TrH862GGimorb3X7uqWcau34NNnEEuLvH43yNeHQ="
+python encrypt_videos.py --in .\my_mp4s `
+  --out .\app\src\main\assets\videos `
+  --asset-prefix videos `
+  --ext mp4 `
+  --index videos.json
+
+
+For Docs
+# PowerShell (Windows) – from project root
+$env:AES_KEY_B64 = "hX4TrH862GGimorb3X7uqWcau34NNnEEuLvH43yNeHQ="
+mkdir app\src\main\assets\docs -Force | Out-Null
+python encrypt_videos.py --in .\my_docs `
+  --out .\app\src\main\assets\docs `
+  --asset-prefix docs `
+  --ext pdf `
+  --index docs.json
