@@ -8,10 +8,13 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import com.ntwoods.offlineplayer.databinding.ActivityPlayerBinding
 
+@UnstableApi
 class PlayerActivity : AppCompatActivity() {
     private lateinit var binding: ActivityPlayerBinding
     private lateinit var assetPath: String
@@ -54,10 +57,15 @@ class PlayerActivity : AppCompatActivity() {
     private fun initializePlayer() {
         if (player != null || isFinishing) return
 
-        // Keep decoder fallback enabled so devices with a problematic hardware
-        // AVC decoder can automatically try another compatible decoder.
+        /*
+         * Decoder fallback protects us from device-specific hardware decoder
+         * failures. Asynchronous MediaCodec queueing is particularly useful for
+         * high-frame-rate content because codec input/output work is moved away
+         * from ExoPlayer's playback thread, reducing dropped-frame pressure.
+         */
         val renderersFactory = DefaultRenderersFactory(this)
             .setEnableDecoderFallback(true)
+            .forceEnableMediaCodecAsynchronousQueueing()
 
         val exoPlayer = ExoPlayer.Builder(this, renderersFactory).build()
         player = exoPlayer
@@ -74,16 +82,23 @@ class PlayerActivity : AppCompatActivity() {
         })
 
         try {
-            // The MP4 is stored as a normal, unencrypted asset. Media3 handles
-            // asset:// URIs directly; no custom DataSource, decryption or temp
-            // video copy is involved.
+            /*
+             * The MP4 is a normal, unencrypted asset. SeekableAssetDataSource
+             * reads it directly through AssetManager.openFd()/FileChannel so a
+             * 1+ GB video never needs to be decrypted, loaded into RAM or copied
+             * to a temporary file before playback.
+             */
             val encodedPath = Uri.encode(assetPath, "/")
             val mediaItem = MediaItem.Builder()
                 .setUri(Uri.parse("asset:///$encodedPath"))
                 .setMimeType(MimeTypes.VIDEO_MP4)
                 .build()
 
-            exoPlayer.setMediaItem(mediaItem)
+            val mediaSource = ProgressiveMediaSource.Factory(
+                SeekableAssetDataSource.Factory(applicationContext)
+            ).createMediaSource(mediaItem)
+
+            exoPlayer.setMediaSource(mediaSource)
             if (playbackPosition > 0L) {
                 exoPlayer.seekTo(playbackPosition)
             }
