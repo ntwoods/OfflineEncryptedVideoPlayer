@@ -1,5 +1,6 @@
 package com.ntwoods.offlineplayer
 
+import android.content.res.AssetManager
 import android.graphics.Bitmap
 import android.graphics.pdf.PdfRenderer
 import android.os.Bundle
@@ -8,51 +9,65 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import com.ntwoods.offlineplayer.crypto.Decryptor
 import java.io.File
 import java.io.FileOutputStream
 
 class PdfActivity : AppCompatActivity() {
     private var renderer: PdfRenderer? = null
     private var current: PdfRenderer.Page? = null
+    private var tempPdfFile: File? = null
+
     private lateinit var iv: ImageView
     private lateinit var btnPrev: ImageButton
     private lateinit var btnNext: ImageButton
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_pdf) // make this layout (below)
+        setContentView(R.layout.activity_pdf)
 
-        // Screenshot block (optional – same as PlayerActivity)
         window.setFlags(
             android.view.WindowManager.LayoutParams.FLAG_SECURE,
             android.view.WindowManager.LayoutParams.FLAG_SECURE
         )
 
         val title = intent.getStringExtra("title") ?: "Document"
-        val assetPath = intent.getStringExtra("assetPath") ?: ""
+        val assetPath = intent.getStringExtra("assetPath").orEmpty()
         supportActionBar?.title = title
 
         iv = findViewById(R.id.pdfImage)
         btnPrev = findViewById(R.id.btnPrev)
         btnNext = findViewById(R.id.btnNext)
 
+        if (assetPath.isBlank() || !assetPath.endsWith(".pdf", ignoreCase = true)) {
+            Toast.makeText(this, "Invalid PDF asset", Toast.LENGTH_LONG).show()
+            finish()
+            return
+        }
+
         try {
-            // Decrypt to cache file (PdfRenderer needs FileDescriptor)
-            val bytes = Decryptor.decryptAssetToBytes(this, assetPath)
+            // PdfRenderer needs a seekable ParcelFileDescriptor. Assets are
+            // therefore streamed to a temporary plain PDF file; no encryption,
+            // decryption or full-file byte array is used.
             val tmp = File.createTempFile("doc_", ".pdf", cacheDir)
-            FileOutputStream(tmp).use { it.write(bytes) }
+            assets.open(assetPath, AssetManager.ACCESS_STREAMING).use { input ->
+                FileOutputStream(tmp).use { output ->
+                    input.copyTo(output, DEFAULT_BUFFER_SIZE)
+                }
+            }
+            tempPdfFile = tmp
 
             val fd = ParcelFileDescriptor.open(tmp, ParcelFileDescriptor.MODE_READ_ONLY)
             renderer = PdfRenderer(fd)
 
             showPage(0)
 
-            btnPrev.setOnClickListener { current?.let { showPage((it.index - 1).coerceAtLeast(0)) } }
-            btnNext.setOnClickListener { current?.let { showPage((it.index + 1).coerceAtMost(renderer!!.pageCount - 1)) } }
-
+            btnPrev.setOnClickListener {
+                current?.let { showPage((it.index - 1).coerceAtLeast(0)) }
+            }
+            btnNext.setOnClickListener {
+                current?.let { showPage((it.index + 1).coerceAtMost(renderer!!.pageCount - 1)) }
+            }
         } catch (e: Exception) {
-            e.printStackTrace()
             Toast.makeText(this, "PDF open failed: ${e.message}", Toast.LENGTH_LONG).show()
             finish()
         }
@@ -78,6 +93,7 @@ class PdfActivity : AppCompatActivity() {
     override fun onDestroy() {
         current?.close()
         renderer?.close()
+        tempPdfFile?.delete()
         super.onDestroy()
     }
 }

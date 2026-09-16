@@ -1,55 +1,46 @@
+# NT Woods Offline Media Player (Android, Kotlin)
 
-# Offline Encrypted Video Player (Android, Kotlin)
+This app plays normal offline media bundled inside the APK. Runtime encryption/decryption is not part of the application.
 
-**What it does:** Plays offline videos that are bundled inside the app as encrypted `.enc` files (AES‑256‑GCM).  
-**Flow:** Encrypt MP4s on your PC with the provided Python script → place `.enc` files into `app/src/main/assets/videos` → the app decrypts on-the-fly and streams to ExoPlayer.
+## Media folders
 
-## Quick start
-1. Open this project in Android Studio (Giraffe+). Let it sync Gradle.
-2. In `app/build.gradle.kts`, a demo key is generated and exposed as `BuildConfig.AES_KEY_B64`. For production, don't hardcode keys.
-3. Put your mp4 files in a folder, then run (Python 3.10+, `pip install pycryptodome`):
+- Videos: `app/src/main/assets/videos/*.mp4`
+- Documents: `app/src/main/assets/docs/*.pdf`
 
-```bash
-python encrypt_videos.py --in ./my_mp4s --out ./app/src/main/assets/videos --key-out ./app/src/main/assets/videos/key.txt
-```
+There is no encryption key, encryption script, runtime decryptor, decrypted video DataSource, or `.enc` media format.
 
-The script will ask you to paste the **AES_KEY_B64** from `app/build.gradle.kts` (or you can set `AES_KEY_B64` environment variable).  
-It will create `.enc` files and update `videos.json` with titles and asset paths.
+## Large video workflow
 
-4. Build & run on a device. Select a video and press **Play**.
+1. Clone/open the project in Android Studio.
+2. Copy the final MP4 directly into `app/src/main/assets/videos/`.
+3. Copy PDFs directly into `app/src/main/assets/docs/`.
+4. Build and install the APK on the target device.
+5. The app automatically lists `.mp4` and `.pdf` files from those asset folders.
 
-## Notes
-- `.enc` file format: `[12-byte IV][ciphertext...][16-byte GCM tag]`.
-- Decryption happens only in memory, via a custom `DecryptedAssetDataSource`.
-- This is **not DRM**. For strong protection, use Widevine DRM / licensing, or store keys in TEE/Keystore and fetch per-license over network.
+## Video playback architecture
 
-## Project structure
-```
-OfflineEncryptedVideoPlayer/
-  app/
-    src/main/
-      AndroidManifest.xml
-      java/com/ntwoods/offlineplayer/
-        MainActivity.kt
-        PlayerActivity.kt
-        VideoAdapter.kt
-        crypto/DecryptedAssetDataSource.kt
-      res/layout/
-        activity_main.xml
-        activity_player.xml
-        item_video.xml
-      res/values/
-        strings.xml colors.xml themes.xml
-      assets/videos/
-        videos.json
-        sample.enc (placeholder; replace with your encrypted files)
-    build.gradle.kts
-    proguard-rules.pro
-  build.gradle.kts
-  settings.gradle.kts
-  encrypt_videos.py
-  gradlew, gradlew.bat, gradle/wrapper/gradle-wrapper.properties
-```
+Large MP4/PDF assets are packaged uncompressed via `androidResources.noCompress`.
 
-## Security caveat
-- Key baked into app is recoverable by a motivated attacker. This demo is for offline training/courseware distribution with *basic* obfuscation. For commercial-grade security, integrate license checks, keystore, and device binding.
+Video playback uses Media3/ExoPlayer with `SeekableAssetDataSource`. The data source opens the bundled MP4 through `AssetManager.openFd()` and seeks directly using a file descriptor/FileChannel. The video is therefore not loaded into RAM and is not copied to a temporary file before playback.
+
+`PlayerActivity` also enables:
+
+- MediaCodec asynchronous queueing to reduce dropped-frame pressure on high-frame-rate content.
+- Decoder fallback for devices whose preferred hardware AVC decoder cannot initialize correctly.
+- Playback-position restoration across activity lifecycle changes.
+
+The project currently uses Media3 1.9.4, which stays aligned with the existing Kotlin 2.0.x project toolchain while providing a substantially newer playback stack than the previous Media3 1.4.1 dependency.
+
+## PDF playback
+
+Android `PdfRenderer` requires a seekable `ParcelFileDescriptor`, so a selected PDF asset is streamed into a temporary cache file while it is open. This is only a file-access requirement for `PdfRenderer`; no encryption/decryption is performed.
+
+## 1.25 GB MP4 note
+
+GitHub's normal repository file-size limit does not allow a ~1.25 GB MP4 to be committed as a regular Git object. The project therefore ignores final MP4/PDF payloads in the asset folders. Keep the large media file locally in `app/src/main/assets/videos/` before building the APK, or manage it separately with Git LFS if desired.
+
+The local MP4 is still bundled into the generated APK even though Git ignores the source media payload.
+
+## Recommended MP4 compatibility
+
+For broad Android hardware compatibility, prefer an MP4 container with H.264/AVC video and AAC audio. The actual smoothness ceiling still depends on the target device's hardware decoder, video resolution, frame rate, bitrate, profile/level and whether the source is constant- or variable-frame-rate.

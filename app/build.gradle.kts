@@ -1,4 +1,3 @@
-
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -16,13 +15,6 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-
-        // BuildConfig field holding the Base64 AES key (demo only)
-        buildConfigField(
-            "String",
-            "AES_KEY_B64",
-            "\"hX4TrH862GGimorb3X7uqWcau34NNnEEuLvH43yNeHQ=\""
-        )
     }
 
     buildTypes {
@@ -45,27 +37,30 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
-    buildFeatures { viewBinding = true; buildConfig = true }
+    buildFeatures { viewBinding = true }
     packaging { resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" } }
 
-    // Encrypted media must remain uncompressed inside the APK so the custom
-    // ExoPlayer DataSource can seek directly to requested ciphertext offsets.
+    // Large local media must stay uncompressed in the APK. SeekableAssetDataSource
+    // relies on AssetManager.openFd() for direct file-descriptor access and fast
+    // random seeks without copying a 1+ GB MP4 into app storage.
     androidResources {
-        noCompress += "enc"
+        noCompress += "mp4"
+        noCompress += "pdf"
     }
 
     dependencies {
-        implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
         implementation("androidx.core:core-ktx:1.13.1")
         implementation("androidx.appcompat:appcompat:1.7.0")
         implementation("androidx.viewpager2:viewpager2:1.1.0")
         implementation("com.google.android.material:material:1.12.0")
         implementation("androidx.constraintlayout:constraintlayout:2.1.4")
 
-        // ExoPlayer
-        implementation("androidx.media3:media3-exoplayer:1.4.1")
-        implementation("androidx.media3:media3-ui:1.4.1")
-        implementation("androidx.media3:media3-common:1.4.1")
+        // 1.9.4 is a much newer stable Media3 line while remaining aligned with
+        // this project's Kotlin 2.0.x toolchain. Media3 1.11 moved to Kotlin 2.2,
+        // which would require a broader build-toolchain migration.
+        implementation("androidx.media3:media3-exoplayer:1.9.4")
+        implementation("androidx.media3:media3-ui:1.9.4")
+        implementation("androidx.media3:media3-common:1.9.4")
 
         testImplementation("junit:junit:4.13.2")
         androidTestImplementation("androidx.test.ext:junit:1.2.1")
