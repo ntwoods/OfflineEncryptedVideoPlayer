@@ -13,5 +13,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "OfflineEncryptedVideoPlayer"
+rootProject.name = "NTWoodsOfflineMediaPlayer"
 include(":app")
