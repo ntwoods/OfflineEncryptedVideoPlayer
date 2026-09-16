@@ -2,3 +2,7 @@
 /.gradle/
 /app/build/
 /app/build/intermediates/javac/debug/compileDebugJavaWithJavac/classes/
+
+# Large final media is bundled locally into the APK but not committed to GitHub.
+/app/src/main/assets/videos/*.mp4
+/app/src/main/assets/docs/*.pdf
