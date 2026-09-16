@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.media3.common.MediaItem
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.ui.PlayerView
@@ -29,7 +30,13 @@ class PlayerActivity : AppCompatActivity() {
         val assetPath = intent.getStringExtra("assetPath") ?: ""
         supportActionBar?.title = title
 
-        player = ExoPlayer.Builder(this).build()
+        // Some Qualcomm devices can fail to initialize their hardware AVC decoder
+        // (for example c2.qti.avc.decoder). Allow Media3 to automatically try the
+        // next compatible decoder, including the Android software AVC decoder.
+        val renderersFactory = DefaultRenderersFactory(this)
+            .setEnableDecoderFallback(true)
+
+        player = ExoPlayer.Builder(this, renderersFactory).build()
         findViewById<PlayerView>(R.id.playerView).player = player
 
         player?.addListener(object : androidx.media3.common.Player.Listener {
