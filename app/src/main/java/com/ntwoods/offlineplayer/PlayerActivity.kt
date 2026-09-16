@@ -11,12 +11,9 @@ import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.analytics.AnalyticsListener
-import androidx.media3.exoplayer.mediacodec.MediaCodecInfo
-import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import com.ntwoods.offlineplayer.databinding.ActivityPlayerBinding
 
@@ -63,59 +60,18 @@ class PlayerActivity : AppCompatActivity() {
     private fun initializePlayer() {
         if (player != null || isFinishing) return
 
-        logAvailableAvcDecoders()
-
         /*
-         * The bundled production video is 3840x2160 H.264 High@5.1 at 30 fps
-         * and ~28 Mbps. On tablets this should stay on the vendor hardware
-         * MediaCodec path. We preserve decoder fallback, but explicitly order
-         * hardware/vendor codecs ahead of software codecs so a software AVC
-         * decoder is not chosen before a capable hardware decoder.
+         * Keep Media3's own codec ordering. Device vendors ship codec-specific
+         * workarounds and preferred decoder ordering, so manually forcing a
+         * particular hardware codec can make playback worse on some devices.
+         * Decoder fallback remains enabled, and asynchronous MediaCodec queueing
+         * reduces dropped-frame pressure on older Android versions.
          */
-        val hardwareFirstCodecSelector = MediaCodecSelector {
-                mimeType,
-                requiresSecureDecoder,
-                requiresTunnelingDecoder ->
-            val decoders = MediaCodecSelector.DEFAULT.getDecoderInfos(
-                mimeType,
-                requiresSecureDecoder,
-                requiresTunnelingDecoder
-            )
-
-            if (!mimeType.startsWith("video/", ignoreCase = true)) {
-                decoders
-            } else {
-                decoders.sortedWith(
-                    compareByDescending<MediaCodecInfo> { it.hardwareAccelerated }
-                        .thenBy { it.softwareOnly }
-                        .thenByDescending { it.vendor }
-                )
-            }
-        }
-
         val renderersFactory = DefaultRenderersFactory(this)
-            .setMediaCodecSelector(hardwareFirstCodecSelector)
             .setEnableDecoderFallback(true)
             .forceEnableMediaCodecAsynchronousQueueing()
 
-        /*
-         * A 28 Mbps local file consumes roughly 3.5 MB/s. Keep a healthy
-         * time-based read-ahead window so APK/flash-storage scheduling cannot
-         * starve the decoder during short I/O stalls. The buffer is still far
-         * smaller than the media file and the video is never loaded as one blob.
-         */
-        val loadControl = DefaultLoadControl.Builder()
-            .setBufferDurationsMs(
-                8_000,   // min buffer
-                30_000,  // max buffer
-                1_500,   // start/resume after seek
-                3_000    // resume after an actual rebuffer
-            )
-            .setPrioritizeTimeOverSizeThresholds(true)
-            .build()
-
         val exoPlayer = ExoPlayer.Builder(this, renderersFactory)
-            .setLoadControl(loadControl)
             .setVideoChangeFrameRateStrategy(
                 C.VIDEO_CHANGE_FRAME_RATE_STRATEGY_ONLY_IF_SEAMLESS
             )
@@ -176,9 +132,10 @@ class PlayerActivity : AppCompatActivity() {
 
         try {
             /*
-             * Normal unencrypted MP4, read directly through openFd()/FileChannel.
-             * There is no decryption, no whole-file RAM allocation and no temp
-             * video copy. This is the fastest seekable path for a bundled asset.
+             * The MP4 is a normal, unencrypted asset. SeekableAssetDataSource
+             * opens the uncompressed APK asset by file descriptor and performs
+             * direct random reads. There is no decryption, whole-file RAM load,
+             * or temporary video copy before playback.
              */
             val encodedPath = Uri.encode(assetPath, "/")
             val mediaItem = MediaItem.Builder()
@@ -200,23 +157,6 @@ class PlayerActivity : AppCompatActivity() {
             Log.e(TAG, "Unable to prepare local MP4", e)
             Toast.makeText(this, "Play failed: ${e.message}", Toast.LENGTH_LONG).show()
             releasePlayer()
-        }
-    }
-
-    private fun logAvailableAvcDecoders() {
-        runCatching {
-            MediaCodecSelector.DEFAULT
-                .getDecoderInfos(MimeTypes.VIDEO_H264, false, false)
-                .forEachIndexed { index, codec ->
-                    Log.i(
-                        TAG,
-                        "AVC_CODEC[$index]=${codec.name} " +
-                            "hardware=${codec.hardwareAccelerated} " +
-                            "software=${codec.softwareOnly} vendor=${codec.vendor}"
-                    )
-                }
-        }.onFailure {
-            Log.w(TAG, "Unable to enumerate AVC decoders", it)
         }
     }
 
