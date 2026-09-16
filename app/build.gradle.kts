@@ -49,10 +49,7 @@ android {
     packaging { resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" } }
 
     dependencies {
-    implementation("com.google.android.gms:play-services-auth:21.2.0")
-    implementation("androidx.security:security-crypto:1.1.0-alpha06")
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
+        implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
         implementation("androidx.core:core-ktx:1.13.1")
         implementation("androidx.appcompat:appcompat:1.7.0")
         implementation("androidx.viewpager2:viewpager2:1.1.0")
@@ -63,9 +60,6 @@ android {
         implementation("androidx.media3:media3-exoplayer:1.4.1")
         implementation("androidx.media3:media3-ui:1.4.1")
         implementation("androidx.media3:media3-common:1.4.1")
-
-        // JSON
-        implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
 
         testImplementation("junit:junit:4.13.2")
         androidTestImplementation("androidx.test.ext:junit:1.2.1")
