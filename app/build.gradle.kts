@@ -48,6 +48,12 @@ android {
     buildFeatures { viewBinding = true; buildConfig = true }
     packaging { resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" } }
 
+    // Encrypted media must remain uncompressed inside the APK so the custom
+    // ExoPlayer DataSource can seek directly to requested ciphertext offsets.
+    androidResources {
+        noCompress += "enc"
+    }
+
     dependencies {
         implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
         implementation("androidx.core:core-ktx:1.13.1")
