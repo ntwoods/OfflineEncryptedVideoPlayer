@@ -27,13 +27,16 @@ class VideosFragment : Fragment() {
     }
 
     private fun loadVideoList(): List<VideoItem> {
-        val am = requireContext().assets
-        val names = am.list("videos")
-            ?.filter { it.lowercase().endsWith(".enc") }
+        val names = requireContext().assets.list("videos")
+            ?.filter { it.endsWith(".mp4", ignoreCase = true) }
             ?.sorted()
             ?: emptyList()
-        return names.map { f ->
-            VideoItem(f.removeSuffix(".enc").removeSuffix(".ENC"), "videos/$f")
+
+        return names.map { fileName ->
+            VideoItem(
+                title = fileName.substringBeforeLast('.'),
+                assetPath = "videos/$fileName"
+            )
         }
     }
 }
