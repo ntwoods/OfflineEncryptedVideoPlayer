@@ -40,9 +40,9 @@ android {
     buildFeatures { viewBinding = true }
     packaging { resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" } }
 
-    // Keep large local media uncompressed inside the APK. This avoids an
-    // additional compression/decompression layer and gives Media3 efficient
-    // random access to bundled MP4 assets.
+    // Large local media must stay uncompressed in the APK. SeekableAssetDataSource
+    // relies on AssetManager.openFd() for direct file-descriptor access and fast
+    // random seeks without copying a 1+ GB MP4 into app storage.
     androidResources {
         noCompress += "mp4"
         noCompress += "pdf"
@@ -55,9 +55,12 @@ android {
         implementation("com.google.android.material:material:1.12.0")
         implementation("androidx.constraintlayout:constraintlayout:2.1.4")
 
-        implementation("androidx.media3:media3-exoplayer:1.4.1")
-        implementation("androidx.media3:media3-ui:1.4.1")
-        implementation("androidx.media3:media3-common:1.4.1")
+        // 1.9.4 is a much newer stable Media3 line while remaining aligned with
+        // this project's Kotlin 2.0.x toolchain. Media3 1.11 moved to Kotlin 2.2,
+        // which would require a broader build-toolchain migration.
+        implementation("androidx.media3:media3-exoplayer:1.9.4")
+        implementation("androidx.media3:media3-ui:1.9.4")
+        implementation("androidx.media3:media3-common:1.9.4")
 
         testImplementation("junit:junit:4.13.2")
         androidTestImplementation("androidx.test.ext:junit:1.2.1")
