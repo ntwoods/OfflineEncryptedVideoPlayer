@@ -21,14 +21,19 @@ class DocsFragment : Fragment() {
         rv.adapter = VideoAdapter(items) { item ->
             val i = Intent(requireContext(), PdfActivity::class.java)
             i.putExtra("title", item.title)
-            i.putExtra("assetPath", item.assetPath) // "docs/xxx.pdf.enc"
+            i.putExtra("assetPath", item.assetPath)
             startActivity(i)
         }
     }
 
     private fun loadDocs(): List<VideoItem> =
         (requireContext().assets.list("docs") ?: emptyArray())
-            .filter { it.lowercase().endsWith(".enc") }
+            .filter { it.endsWith(".pdf", ignoreCase = true) }
             .sorted()
-            .map { name -> VideoItem(name.removeSuffix(".enc"), "docs/$name") }
+            .map { fileName ->
+                VideoItem(
+                    title = fileName.substringBeforeLast('.'),
+                    assetPath = "docs/$fileName"
+                )
+            }
 }
